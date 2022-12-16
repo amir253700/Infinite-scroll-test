@@ -1,6 +1,4 @@
-import { useState, useCallback } from "react";
-
-type RequestMethod = "GET";
+import { useState, useCallback, useEffect } from "react";
 
 type LazyFetchResult = [
   (url: string) => Promise<any>,
@@ -11,10 +9,10 @@ type LazyFetchResult = [
   }
 ];
 
-const useLazyFetch = (): LazyFetchResult => {
-  const [result, setResult] = useState<any>(null);
+const useLazyFetch = (initUrl: string): LazyFetchResult => {
+  const [result, setResult] = useState<any[]>([]);
   const [isError, setIsError] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchData = useCallback(async (url: string) => {
     setIsLoading(true);
@@ -25,13 +23,20 @@ const useLazyFetch = (): LazyFetchResult => {
         throw new Error("Request Failed");
       }
       const jsonResponse = await response.json();
-      setResult(jsonResponse);
+      setResult((prev) => {
+        return [...prev, ...jsonResponse];
+      });
+      setIsLoading(false);
       return jsonResponse;
     } catch (error: any) {
-      console.log(error?.message);
       setIsLoading(false);
+      setIsError(true);
     }
   }, []);
+
+  useEffect(() => {
+    fetchData(initUrl);
+  }, [fetchData, initUrl]);
 
   return [fetchData, { isLoading, result, isError }];
 };
